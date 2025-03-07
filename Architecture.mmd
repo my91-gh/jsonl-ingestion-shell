@@ -1,0 +1,54 @@
+flowchart TB
+    subgraph "Bundle Oozie"
+        direction TB
+        B[Bundle Oozie] --> AC
+        B --> PC
+        B --> DC
+        B --> MC
+        
+        subgraph "Coordinateurs"
+            AC[Analyzer Coordinator]
+            PC[Processor Coordinator]
+            DC[Dependency Coordinator]
+            MC[Merger Coordinator]
+        end
+        
+        AC --> AW[Analyzer Workflow]
+        PC --> PW[Processor Workflow]
+        DC --> DW[Dependency Workflow]
+        MC --> MW[Merger Workflow]
+    end
+    
+    subgraph "Workflows & Scripts"
+        AW --> IAS[input_analyzer.sh]
+        PW --> ECS[extract_chunk_id.sh]
+        PW --> PSC[process_chunk.sh]
+        DW --> CAP[check_all_processed.sh]
+        MW --> RMS[result_merger.sh]
+    end
+    
+    subgraph "Flux de données"
+        JSONL[(Fichiers JSONL)] --> AW
+        AW --> CHUNKS[(Chunks)]
+        CHUNKS --> PW
+        PW --> PROCESSED[(Chunks traités)]
+        PROCESSED --> DW
+        DW --> FLAG[_SUCCESS Flag]
+        FLAG --> MW
+        MW --> OUTPUT[(Résultat final Parquet)]
+    end
+    
+    %% Dépendances entre coordinateurs
+    AC -.-> |analyzer_done| PC
+    AC -.-> |analyzer_done| DC
+    DC -.-> |processor_done| MC
+    
+    classDef coordinator fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef workflow fill:#bbf,stroke:#333,stroke-width:1px;
+    classDef script fill:#bfb,stroke:#333,stroke-width:1px;
+    classDef datastore fill:#fda,stroke:#333,stroke-width:1px;
+    
+    class AC,PC,DC,MC coordinator;
+    class AW,PW,DW,MW workflow;
+    class IAS,ECS,PSC,CAP,RMS script;
+    class JSONL,CHUNKS,PROCESSED,FLAG,OUTPUT datastore;
