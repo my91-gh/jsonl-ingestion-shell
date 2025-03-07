@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workflow-app xmlns="uri:oozie:workflow:0.5" name="jsonl-processor-workflow">
+    
+    <global>
+        <job-tracker>${jobTracker}</job-tracker>
+        <name-node>${nameNode}</name-node>
+    </global>
+    
+    <start to="extract-chunk-id"/>
+    
+    <!-- Extraction de l'ID du chunk à partir du chemin -->
+    <action name="extract-chunk-id">
+        <shell xmlns="uri:oozie:shell-action:0.3">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <configuration>
+                <property>
+                    <n>mapred.job.queue.name</n>
+                    <value>${queueName}</value>
+                </property>
+            </configuration>
+            <exec>extract_chunk_id.sh</exec>
+            <argument>${chunkPath}</argument>
+            <file>${appPath}/scripts/extract_chunk_id.sh</file>
+            <capture-output/>
+        </shell>
+        <ok to="process-chunk"/>
+        <error to="kill"/>
+    </action>
+    
+    <!-- Traitement du chunk -->
+    <action name="process-chunk">
+        <shell xmlns="uri:oozie:shell-action:0.3">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <configuration>
+                <property>
+                    <n>mapred.job.queue.name</n>
+                    <value>${queueName}</value>
+                </property>
+            </configuration>
+            <exec>process_chunk.sh</exec>
+            <argument>${chunkPath}</argument>
+            <argument>${processedDir}</argument>
+            <argument>${sparkMaster}</argument>
+            <argument>${sparkDriverMemory}</argument>
+            <argument>${sparkExecutorMemory}</argument>
+            <file>${appPath}/scripts/process_chunk.sh</file>
+        </shell>
+        <ok to="end"/>
+        <error to="kill"/>
+    </action>
+    
+    <kill name="kill">
+        <message>Le workflow de traitement a échoué : [${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+    
+    <end name="end"/>
+</workflow-app>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workflow-app xmlns="uri:oozie:workflow:0.5" name="jsonl-merger-workflow">
+    
+    <global>
+        <job-tracker>${jobTracker}</job-tracker>
+        <name-node>${nameNode}</name-node>
+    </global>
+    
+    <start to="prepare-output-dir"/>
+    
+    <!-- Préparation du répertoire de sortie -->
+    <action name="prepare-output-dir">
+        <fs>
+            <mkdir path="${outputDir}"/>
+            <delete path="${outputDir}/_SUCCESS"/>
+        </fs>
+        <ok to="merge-results"/>
+        <error to="kill"/>
+    </action>
+    
+    <!-- Fusion des résultats -->
+    <action name="merge-results">
+        <shell xmlns="uri:oozie:shell-action:0.3">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <configuration>
+                <property>
+                    <n>mapred.job.queue.name</n>
+                    <value>${queueName}</value>
+                </property>
+            </configuration>
+            <exec>result_merger.sh</exec>
+            <argument>${chunkListDir}</argument>
+            <argument>${processedDir}</argument>
+            <argument>${outputDir}</argument>
+            <argument>${sparkMaster}</argument>
+            <argument>${sparkDriverMemory}</argument>
+            <argument>${sparkExecutorMemory}</argument>
+            <file>${appPath}/scripts/result_merger.sh</file>
+        </shell>
+        <ok to="create-success-flag"/>
+        <error to="kill"/>
+    </action>
+    
+    <!-- Création du drapeau de succès -->
+    <action name="create-success-flag">
+        <fs>
+            <touchz path="${outputDir}/_SUCCESS"/>
+        </fs>
+        <ok to="end"/>
+        <error to="kill"/>
+    </action>
+    
+    <kill name="kill">
+        <message>Le workflow de fusion a échoué : [${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+    
+    <end name="end"/>
+</workflow-app>

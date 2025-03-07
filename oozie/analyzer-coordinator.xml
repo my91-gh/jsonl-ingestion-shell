@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coordinator-app xmlns="uri:oozie:coordinator:0.4" 
+                 name="jsonl-analyzer-coordinator" 
+                 frequency="${coord:days(1)}" 
+                 start="${startTime}" 
+                 end="${endTime}" 
+                 timezone="UTC">
+    
+    <controls>
+        <concurrency>1</concurrency>
+        <execution>FIFO</execution>
+        <throttle>1</throttle>
+    </controls>
+    
+    <datasets>
+        <dataset name="input" frequency="${coord:days(1)}" initial-instance="${startTime}" timezone="UTC">
+            <uri-template>${inputPath}</uri-template>
+            <done-flag></done-flag>
+        </dataset>
+        <dataset name="analyzer_output" frequency="${coord:days(1)}" initial-instance="${startTime}" timezone="UTC">
+            <uri-template>${chunkListDir}/analyzer_done</uri-template>
+            <done-flag></done-flag>
+        </dataset>
+    </datasets>
+    
+    <input-events>
+        <data-in name="input" dataset="input">
+            <instance>${coord:current(0)}</instance>
+        </data-in>
+    </input-events>
+    
+    <output-events>
+        <data-out name="analyzer_out" dataset="analyzer_output">
+            <instance>${coord:current(0)}</instance>
+        </data-out>
+    </output-events>
+    
+    <action>
+        <workflow>
+            <app-path>${appPath}/workflow/analyzer-workflow.xml</app-path>
+            <configuration>
+                <property>
+                    <n>jobTracker</n>
+                    <value>${jobTracker}</value>
+                </property>
+                <property>
+                    <n>nameNode</n>
+                    <value>${nameNode}</value>
+                </property>
+                <property>
+                    <n>queueName</n>
+                    <value>${queueName}</value>
+                </property>
+                <property>
+                    <n>inputPath</n>
+                    <value>${coord:dataIn('input')}</value>
+                </property>
+                <property>
+                    <n>chunkListDir</n>
+                    <value>${chunkListDir}/${coord:formatTime(coord:nominalTime(), 'yyyy-MM-dd')}</value>
+                </property>
+                <property>
+                    <n>chunkSize</n>
+                    <value>${chunkSize}</value>
+                </property>
+                <property>
+                    <n>runId</n>
+                    <value>${coord:formatTime(coord:nominalTime(), 'yyyyMMdd')}</value>
+                </property>
+            </configuration>
+        </workflow>
+    </action>
+</coordinator-app>

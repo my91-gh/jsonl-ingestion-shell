@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workflow-app xmlns="uri:oozie:workflow:0.5" name="jsonl-analyzer-workflow">
+    
+    <global>
+        <job-tracker>${jobTracker}</job-tracker>
+        <name-node>${nameNode}</name-node>
+    </global>
+    
+    <start to="prepare-dirs"/>
+    
+    <!-- Préparation des répertoires nécessaires -->
+    <action name="prepare-dirs">
+        <fs>
+            <mkdir path="${chunkListDir}"/>
+            <mkdir path="${chunkListDir}/processed"/>
+            <delete path="${chunkListDir}/analyzer_done"/>
+        </fs>
+        <ok to="analyzer-action"/>
+        <error to="kill"/>
+    </action>
+    
+    <!-- Action d'analyse -->
+    <action name="analyzer-action">
+        <shell xmlns="uri:oozie:shell-action:0.3">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <configuration>
+                <property>
+                    <n>mapred.job.queue.name</n>
+                    <value>${queueName}</value>
+                </property>
+            </configuration>
+            <exec>input_analyzer.sh</exec>
+            <argument>${inputPath}</argument>
+            <argument>${chunkListDir}</argument>
+            <argument>${chunkSize}</argument>
+            <file>${appPath}/scripts/input_analyzer.sh</file>
+            <capture-output/>
+        </shell>
+        <ok to="end"/>
+        <error to="kill"/>
+    </action>
+    
+    <kill name="kill">
+        <message>Le workflow d'analyse a échoué : [${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+    
+    <end name="end"/>
+</workflow-app>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workflow-app xmlns="uri:oozie:workflow:0.5" name="jsonl-dependency-workflow">
+    
+    <global>
+        <job-tracker>${jobTracker}</job-tracker>
+        <name-node>${nameNode}</name-node>
+    </global>
+    
+    <start to="check-all-processed"/>
+    
+    <!-- Vérification que tous les chunks sont traités -->
+    <action name="check-all-processed">
+        <shell xmlns="uri:oozie:shell-action:0.3">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <configuration>
+                <property>
+                    <n>mapred.job.queue.name</n>
+                    <value>${queueName}</value>
+                </property>
+            </configuration>
+            <exec>check_all_processed.sh</exec>
+            <argument>${chunkListDir}</argument>
+            <argument>${processedDir}</argument>
+            <file>${appPath}/scripts/check_all_processed.sh</file>
+            <capture-output/>
+        </shell>
+        <ok to="process-status-decision"/>
+        <error to="kill"/>
+    </action>
+    
+    <!-- Décision basée sur le statut de traitement -->
+    <decision name="process-status-decision">
+        <switch>
+            <case to="create-success-flag">
+                ${wf:actionData('check-all-processed')['all_processed'] eq 'true'}
+            </case>
+            <default to="kill"/>
+        </switch>
+    </decision>
+    
+    <!-- Création du drapeau de succès -->
+    <action name="create-success-flag">
+        <fs>
+            <touchz path="${processorDoneFlag}"/>
+        </fs>
+        <ok to="end"/>
+        <error to="kill"/>
+    </action>
+    
+    <kill name="kill">
+        <message>Le workflow de dépendance a échoué : [${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+    
+    <end name="end"/>
+</workflow-app>

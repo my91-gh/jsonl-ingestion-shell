@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coordinator-app xmlns="uri:oozie:coordinator:0.4" 
+                 name="jsonl-merger-coordinator" 
+                 frequency="${coord:minutes(30)}" 
+                 start="${startTime}" 
+                 end="${endTime}" 
+                 timezone="UTC">
+    
+    <controls>
+        <concurrency>1</concurrency>
+        <execution>FIFO</execution>
+        <throttle>1</throttle>
+    </controls>
+    
+    <datasets>
+        <dataset name="processor_done" frequency="${coord:minutes(30)}" initial-instance="${startTime}" timezone="UTC">
+            <uri-template>${chunkListDir}/processed/_SUCCESS</uri-template>
+            <done-flag></done-flag>
+        </dataset>
+    </datasets>
+    
+    <input-events>
+        <data-in name="processor_done_event" dataset="processor_done">
+            <instance>${coord:current(0)}</instance>
+        </data-in>
+    </input-events>
+    
+    <action>
+        <workflow>
+            <app-path>${appPath}/workflow/merger-workflow.xml</app-path>
+            <configuration>
+                <property>
+                    <n>jobTracker</n>
+                    <value>${jobTracker}</value>
+                </property>
+                <property>
+                    <n>nameNode</n>
+                    <value>${nameNode}</value>
+                </property>
+                <property>
+                    <n>queueName</n>
+                    <value>${queueName}</value>
+                </property>
+                <property>
+                    <n>chunkListDir</n>
+                    <value>${chunkListDir}</value>
+                </property>
+                <property>
+                    <n>processedDir</n>
+                    <value>${processedDir}</value>
+                </property>
+                <property>
+                    <n>outputDir</n>
+                    <value>${outputDir}/${coord:formatTime(coord:nominalTime(), 'yyyy-MM-dd_HH-mm')}</value>
+                </property>
+                <property>
+                    <n>sparkMaster</n>
+                    <value>${sparkMaster}</value>
+                </property>
+                <property>
+                    <n>sparkDriverMemory</n>
+                    <value>${sparkDriverMemory}</value>
+                </property>
+                <property>
+                    <n>sparkExecutorMemory</n>
+                    <value>${sparkExecutorMemory}</value>
+                </property>
+            </configuration>
+        </workflow>
+    </action>
+</coordinator-app>

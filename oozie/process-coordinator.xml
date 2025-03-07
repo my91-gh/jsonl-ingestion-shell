@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coordinator-app xmlns="uri:oozie:coordinator:0.4" 
+                 name="jsonl-processor-coordinator" 
+                 frequency="${coord:minutes(10)}" 
+                 start="${startTime}" 
+                 end="${endTime}" 
+                 timezone="UTC">
+    
+    <controls>
+        <concurrency>3</concurrency>
+        <execution>FIFO</execution>
+        <throttle>10</throttle>
+    </controls>
+    
+    <datasets>
+        <dataset name="analyzer_done" frequency="${coord:minutes(10)}" initial-instance="${startTime}" timezone="UTC">
+            <uri-template>${chunkListDir}/analyzer_done</uri-template>
+            <done-flag></done-flag>
+        </dataset>
+        <dataset name="chunks" frequency="${coord:minutes(10)}" initial-instance="${startTime}" timezone="UTC">
+            <uri-template>${chunkListDir}/chunk_*.json</uri-template>
+            <done-flag></done-flag>
+        </dataset>
+    </datasets>
+    
+    <input-events>
+        <data-in name="analyzer_done_event" dataset="analyzer_done">
+            <instance>${coord:current(0)}</instance>
+        </data-in>
+        <data-in name="input_chunks" dataset="chunks">
+            <instance>${coord:current(0)}</instance>
+        </data-in>
+    </input-events>
+    
+    <action>
+        <workflow>
+            <app-path>${appPath}/workflow/processor-workflow.xml</app-path>
+            <configuration>
+                <property>
+                    <n>jobTracker</n>
+                    <value>${jobTracker}</value>
+                </property>
+                <property>
+                    <n>nameNode</n>
+                    <value>${nameNode}</value>
+                </property>
+                <property>
+                    <n>queueName</n>
+                    <value>${queueName}</value>
+                </property>
+                <property>
+                    <n>chunkListDir</n>
+                    <value>${chunkListDir}</value>
+                </property>
+                <property>
+                    <n>processedDir</n>
+                    <value>${processedDir}</value>
+                </property>
+                <property>
+                    <n>chunkPath</n>
+                    <value>${coord:dataIn('input_chunks')}</value>
+                </property>
+                <property>
+                    <n>sparkMaster</n>
+                    <value>${sparkMaster}</value>
+                </property>
+                <property>
+                    <n>sparkDriverMemory</n>
+                    <value>${sparkDriverMemory}</value>
+                </property>
+                <property>
+                    <n>sparkExecutorMemory</n>
+                    <value>${sparkExecutorMemory}</value>
+                </property>
+            </configuration>
+        </workflow>
+    </action>
+</coordinator-app>
